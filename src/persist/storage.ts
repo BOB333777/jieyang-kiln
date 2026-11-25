@@ -1,6 +1,7 @@
 import { SCHEMA_VERSION, type GameSession, type Part, type ShapeState, type ShapeValues } from '../game/types'
 import { isValidSplit } from '../sim/split'
 import { SHAPE_PARTS, clampShapeValue, shapeSliders } from '../sim/shape'
+import { decodeGlaze, encodeGlaze } from './glazeCodec'
 
 const KEY = 'jieyang.taosu.save'
 
@@ -49,7 +50,10 @@ export function writeSession(session: GameSession, store?: StorageLike): boolean
   const s = store ?? browserStorage()
   if (!s) return false
   try {
-    s.setItem(KEY, JSON.stringify(session))
+    // 釉层在存储边界换成游程编码，内存态仍是 Uint8Array（见 glazeCodec.ts）
+    const { s6_glaze, ...rest } = session
+    const payload = s6_glaze ? { ...rest, s6_glaze: encodeGlaze(s6_glaze) } : rest
+    s.setItem(KEY, JSON.stringify(payload))
     return true
   } catch {
     return false
@@ -72,7 +76,7 @@ function sanitize(raw: unknown): GameSession | null {
   if (typeof d.s1_confirmed !== 'boolean') return null
   // 比例不合法（有非数字 / 低于最小值 / 和不为 1）= 坏档。我们的写入方不会产出这种值，不修，直接新局。
   if (!isValidSplit(d.s1_split)) return null
-  return {
+  const session: GameSession = {
     schemaVersion: SCHEMA_VERSION,
     id: d.id,
     s1_confirmed: d.s1_confirmed,
@@ -80,6 +84,11 @@ function sanitize(raw: unknown): GameSession | null {
     // s2_shape 是后来加的阶段：旧存档没有它就补默认，不算坏档。有它则逐项修复（夹取 / 补中性）。
     s2_shape: sanitizeShape(d.s2_shape),
   }
+  // 釉层缺失（拆泥阶段的存档）或解不出来：退回「还没上釉」，不把整局判成坏档——
+  // 前面拆泥捏塑的进度比一层可重涂的釉值钱。
+  const glaze = decodeGlaze(d.s6_glaze)
+  if (glaze) session.s6_glaze = glaze
+  return session
 }
 
 function asRecord(raw: unknown): Record<string, unknown> {

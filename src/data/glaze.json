@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "canvas": 512,
+  "maxLayers": 3,
+  "thicknessShade": [1, 0.88, 0.78],
+  "rawSource": "生釉色为推断：来源只给成品色（设计文档 §2.6）",
+  "bare": {
+    "id": 0,
+    "key": "bare",
+    "fired": "#8A5A38",
+    "source": "陶泥烧成后色泽熏褐"
+  },
+  "glazes": [
+    {
+      "id": 1,
+      "key": "ash",
+      "raw": "#8A8A8A",
+      "fired": "#A8442F",
+      "source": "陈茂辉：灰色釉煅烧之后会变成红色"
+    },
+    {
+      "id": 2,
+      "key": "green",
+      "raw": "#B08C4F",
+      "fired": "#4F7A48",
+      "source": "陈保国《五子佛》衣裤施绿釉"
+    },
+    {
+      "id": 3,
+      "key": "white",
+      "raw": "#D8D5CC",
+      "fired": "#EFEBE0",
+      "source": "《五子佛》白釉"
+    },
+    {
+      "id": 4,
+      "key": "celadon",
+      "raw": "#C4C9C6",
+      "fired": "#7FB0A2",
+      "source": "《老子出关》衣袍水绿窑变釉"
+    },
+    {
+      "id": 5,
+      "key": "graphite",
+      "raw": "#4B3B2E",
+      "fired": "#23211E",
+      "source": "《老子出关》青牛石墨釉"
+    }
+  ]
+}
