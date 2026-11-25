@@ -12,6 +12,19 @@ export type ShapeValues = Record<string, number>
 /** ② 捏：四部位滑杆值 + 每个部位的出生变形动画是否播放过。 */
 export type ShapeState = Record<Part, ShapeValues> & { animated: Record<Part, boolean> }
 
+/**
+ * 釉层：一张 UV 贴图，每像素记「哪种釉、多厚」（设计文档 §2.6）。
+ * 不变量：glazeIds 为 0 的像素 thickness 恒为 0（露胎没有厚度）。
+ */
+export interface GlazeLayer {
+  width: number
+  height: number
+  /** 每像素釉种，0 = 无釉 */
+  glazeIds: Uint8Array
+  /** 每像素厚度 1–3 层；无釉处为 0 */
+  thickness: Uint8Array
+}
+
 export interface GameSession {
   schemaVersion: 2
   id: string
@@ -19,6 +32,8 @@ export interface GameSession {
   s1_confirmed: boolean
   s1_split: Split
   s2_shape: ShapeState
+  /** ⑥ 上釉。undefined = 还没上釉（拆泥阶段的存档就是这种，读档不算坏档）。 */
+  s6_glaze?: GlazeLayer
 }
 
 export const SCHEMA_VERSION = 2 as const

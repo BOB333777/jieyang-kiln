@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { newSession, type GameSession } from '../game/types'
+import { createLayer, paintDab } from '../sim/glaze'
 import { defaultSplit } from '../sim/split'
 import { SHAPE_CENTER, SHAPE_PARTS, shapeSliders } from '../sim/shape'
 import { loadSession, writeSession, type StorageLike } from './storage'
@@ -183,5 +184,55 @@ describe('存档：② 捏（s2_shape）兼容与夹取', () => {
     const back = loadSession(store)
     expect(back.discarded).toBe(false)
     expect(back.session).toEqual(s)
+  })
+})
+
+describe('存档：釉层', () => {
+  const KEY = 'jieyang.taosu.save'
+
+  function layered() {
+    const layer = createLayer(16, 16)
+    paintDab(layer, { x: 8.5, y: 8.5, radius: 3, glazeId: 1 })
+    paintDab(layer, { x: 8.5, y: 8.5, radius: 1, glazeId: 2 })
+    return { ...newSession('run-glaze', defaultSplit()), s6_glaze: layer }
+  }
+
+  it('带釉层写读往返：釉种、厚度、尺寸逐字节相同', () => {
+    const store = memoryStorage()
+    const s = layered()
+    expect(writeSession(s, store)).toBe(true)
+    const back = loadSession(store)
+    expect(back.session).not.toBeNull()
+    expect(back.session?.s6_glaze?.width).toBe(16)
+    expect(Array.from(back.session!.s6_glaze!.glazeIds)).toEqual(Array.from(s.s6_glaze.glazeIds))
+    expect(Array.from(back.session!.s6_glaze!.thickness)).toEqual(Array.from(s.s6_glaze.thickness))
+    expect(back.discarded).toBe(false)
+  })
+
+  it('512×512 空白釉层写进去，釉层只占几百字节（游程压紧）', () => {
+    const store = memoryStorage()
+    // 只量釉层带来的增量：整档长度会随阶段字段（s1_split、s2_shape 等）增长，与釉层压缩无关。
+    const base = newSession('run-big', defaultSplit())
+    writeSession(base, store)
+    const withoutGlaze = store.dump[KEY].length
+    writeSession({ ...base, s6_glaze: createLayer(512, 512) }, store)
+    expect(store.dump[KEY].length - withoutGlaze).toBeLessThan(400)
+  })
+
+  it('旧存档（拆泥阶段存的，没有 s6_glaze）照样能读，不算坏档', () => {
+    const old = { schemaVersion: 2, id: 'run-old', s1_confirmed: true, s1_split: { head: 0.3, body: 0.3, arms: 0.15, legs: 0.25 } }
+    const back = loadSession(memoryStorage({ [KEY]: JSON.stringify(old) }))
+    expect(back.session?.id).toBe('run-old')
+    expect(back.session?.s6_glaze).toBeUndefined()
+    expect(back.discarded).toBe(false)
+  })
+
+  it('釉层编码坏了 → 只丢釉层，拆泥进度还在，整局不当坏档', () => {
+    const broken = { schemaVersion: 2, id: 'run-broken', s1_confirmed: true, s1_split: { head: 0.3, body: 0.3, arms: 0.15, legs: 0.25 }, s6_glaze: { w: 16, h: 16, runs: '乱码' } }
+    const back = loadSession(memoryStorage({ [KEY]: JSON.stringify(broken) }))
+    expect(back.session?.id).toBe('run-broken')
+    expect(back.session?.s1_confirmed).toBe(true)
+    expect(back.session?.s6_glaze).toBeUndefined()
+    expect(back.discarded).toBe(false)
   })
 })
